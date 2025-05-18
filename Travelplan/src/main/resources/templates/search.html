@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><title>観光地検索</title></head>
+<body>
+<h1>観光地検索</h1>
+<form th:action="@{/search/results}" method="get">
+    <input type="text" name="keyword" placeholder="キーワードを入力" required/>
+    <button type="submit">検索</button>
+</form>
+<p><a th:href="@{/}">ホームに戻る</a></p>
+</body>
+</html>
