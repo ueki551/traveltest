@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><title>検索結果</title></head>
+<body>
+<h1>検索結果</h1>
+<div th:if="${#lists.isEmpty(attractions)}">
+    <p>該当する観光地がありません。</p>
+</div>
+<ul th:if="${!#lists.isEmpty(attractions)}">
+    <li th:each="at : ${attractions}">
+        <strong th:text="${at.name}">Name</strong>
+        <br/>
+        <span th:text="${at.description}">Description</span>
+    </li>
+</ul>
+<p><a th:href="@{/search}">検索に戻る</a></p>
+</body>
+</html>
