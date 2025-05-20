@@ -20,7 +20,7 @@ public class TravelplanApplication {
 		return args -> {
 			repo.save(new TouristAttraction("東京タワー", "東京のシンボルタワー", 35.6586, 139.7454));
 			repo.save(new TouristAttraction("浅草寺", "浅草にある古刹", 35.7148, 139.7967));
-			// 他のサンプルデータ…
+			// 他のサンプルデータ
 		};
 
 	}
