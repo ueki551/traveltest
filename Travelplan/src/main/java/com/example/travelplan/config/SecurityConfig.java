@@ -21,7 +21,7 @@ public class SecurityConfig {
     public SecurityConfig(MyUserDetailsService uds) {
         this.userDetailsService = uds;
     }
-
+    //IoCコンテナに管理されるオブジェクト@Bean
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
