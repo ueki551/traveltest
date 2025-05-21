@@ -16,7 +16,7 @@ public class User {
 
     private String roles;
 
-    // ここからゲッター／セッターを追加
+    // ゲッターセッターを追加
 
     public Long getId() {
         return id;
@@ -46,5 +46,5 @@ public class User {
         this.roles = roles;
     }
 
-    // ... 必要に応じて他のセッターなど
+
 }
