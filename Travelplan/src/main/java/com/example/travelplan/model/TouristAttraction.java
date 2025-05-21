@@ -1,4 +1,4 @@
-// src/main/java/com/example/travelplan/model/TouristAttraction.java
+
 package com.example.travelplan.model;
 
 import jakarta.persistence.*;
@@ -30,7 +30,7 @@ public class TouristAttraction {
         this.longitude = longitude;
     }
 
-    // Getters and setters
+    // ゲッターとセッター
     public Long getId() { return id; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
