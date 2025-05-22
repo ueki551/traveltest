@@ -7,7 +7,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Service;
 import com.example.travelplan.repository.UserRepository;
 import com.example.travelplan.model.User;
-import java.util.List;                               // ← 追加
+import java.util.List;
 
 @Service
 public class MyUserDetailsService implements UserDetailsService {
