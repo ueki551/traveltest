@@ -11,7 +11,7 @@
 	<groupId>com.example.travelapp</groupId>
 	<artifactId>travelplan</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>travelplan</name>
+	<name>travel plan</name>
 	<description>Demo project for Spring Boot</description>
 	<url/>
 	<licenses>
