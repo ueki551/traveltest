@@ -52,7 +52,7 @@
         <ul id="schedule-list">
             <li th:each="item : ${scheduleList}">
                 <span th:text="${item.placeName} + ' (' + item.placeAddress + ')'">観光地名 (住所)</span>
-                <span th:text="${#dates.format(item.scheduledAt, 'yyyy/MM/dd HH:mm')}">登録日時</span>
+                <span th:text="${#temporals.format(item.scheduledAt, 'yyyy/MM/dd HH:mm')}">登録日時</span>
             </li>
         </ul>
     </section>
@@ -158,7 +158,7 @@
                 // 登録が成功したら画面リロードか、部分更新で「your schedule」を更新してもよい
                 window.location.reload();
             } else {
-                return res.json().then(err => { throw new Error(err.message || '登録に失敗'); });
+                return res.json().then(err => { throw new Error(err.message || '登録に失敗したんゴねえ'); });
             }
         })
         .catch(err => {
