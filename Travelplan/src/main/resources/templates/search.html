@@ -1,31 +1,172 @@
 <!DOCTYPE html>
-<html lang="ja">
-
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>Sample_GoogleMap</title>
+    <title>観光地検索＆スケジュール登録</title>
 
-    <script src="http://maps.google.com/maps/api/js?key=AIzaSyB1XZbyGazfOgADzHzTDjyKOcKuWe1x5LQ&language=ja"></script>
+    <!-- Google Maps JavaScript API を読み込む（必ず HTTPS で） -->
+    <script async defer
+            src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB1XZbyGazfOgADzHzTDjyKOcKuWe1x5LQ&language&libraries=places&callback=initMap">
+    </script>
 
     <style>
         html { height: 100% }
-        body { height: 100% }
-        #map { height: 100%; width: 100%}
+        body { height: 100%; margin: 0; padding: 0; font-family: sans-serif; }
+        #map { height: 400px; width: 100%; margin-bottom: 16px; }
+        #search-form { padding: 0 16px; margin-bottom: 16px; }
+        #result-list { list-style: none; padding: 0 16px; }
+        #result-list li { margin-bottom: 8px; display: flex; justify-content: space-between; }
+        #result-list button { margin-left: 8px; }
+        #schedule-list { padding: 0 16px; margin-top: 32px; }
+        #schedule-list li { margin-bottom: 4px; }
     </style>
 </head>
 
 <body>
-<div id="map"></div>　
+<header style="background: #004d99; color: white; padding: 16px;">
+    <h1>観光地検索＆スケジュール登録</h1>
+    <nav>
+        <a th:href="@{/}" style="color:white;">ホーム</a> |
+        <a th:href="@{/logout}" th:if="${#authentication.principal}" style="color:white;">ログアウト</a>
+    </nav>
+</header>
 
-<script>
-    var MyLatLng = new google.maps.LatLng(35.6811673, 139.7670516);
-    var Options = {
-     zoom: 15,      //地図の縮尺値
-     center: MyLatLng,    //地図の中心座標
-     mapTypeId: 'roadmap'   //地図の種類
-    };
-    var map = new google.maps.Map(document.getElementById('map'), Options);
+<main>
+    <!-- 地図表示エリア -->
+    <div id="map"></div>
+
+    <!-- キーワード検索フォーム -->
+    <section id="search-form">
+        <input id="keyword" type="text" placeholder="キーワードを入力（例：東京タワー）" style="width: 70%;" />
+        <button id="btnSearch">検索</button>
+    </section>
+
+    <!-- 検索結果リスト -->
+    <section id="results">
+        <ul id="result-list"></ul>
+    </section>
+
+    <!-- 現在のスケジュール一覧 -->
+    <section id="schedule-section">
+        <h2 style="padding: 0 16px; margin-top: 32px;">あなたのスケジュール</h2>
+        <ul id="schedule-list">
+            <li th:each="item : ${scheduleList}">
+                <span th:text="${item.placeName} + ' (' + item.placeAddress + ')'">観光地名 (住所)</span>
+                <span th:text="${#dates.format(item.scheduledAt, 'yyyy/MM/dd HH:mm')}">登録日時</span>
+            </li>
+        </ul>
+    </section>
+</main>
+
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    let map;
+    let markers = [];
+
+    // 1. Google Maps API が読み込まれると自動的に呼ばれる
+    function initMap() {
+        map = new google.maps.Map(document.getElementById('map'), {
+            center: { lat: 35.6895, lng: 139.6917 }, // 東京駅周辺
+            zoom: 13
+        });
+    }
+
+    // 2. 検索ボタンを押したときの処理
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('btnSearch').addEventListener('click', function() {
+            const keyword = document.getElementById('keyword').value.trim();
+            if (!keyword) {
+                alert('キーワードを入力してください');
+                return;
+            }
+
+            // PlacesService を使ってキーワード検索
+            const service = new google.maps.places.PlacesService(map);
+            const request = {
+                query: keyword,
+                fields: ['name', 'geometry', 'formatted_address']  // 取得したい項目
+            };
+
+            service.findPlaceFromQuery(request, (results, status) => {
+                const ul = document.getElementById('result-list');
+                ul.innerHTML = '';   // 既存結果クリア
+
+                // 地図上のマーカーもクリア
+                markers.forEach(m => m.setMap(null));
+                markers = [];
+
+                if (status === google.maps.places.PlacesServiceStatus.OK && results && results.length) {
+                    // 結果をリスト表示＆マーカー登録
+                    results.forEach(place => {
+                        // ①リストに項目を追加
+                        const li = document.createElement('li');
+                        li.textContent = `${place.name} (${place.formatted_address})`;
+
+                        // 「スケジュール追加」ボタンを作成
+                        const btn = document.createElement('button');
+                        btn.textContent = 'スケジュールに追加';
+                        btn.addEventListener('click', function() {
+                            addToSchedule(place); // 後述する関数でバックエンドへ登録
+                        });
+
+                        li.appendChild(btn);
+                        ul.appendChild(li);
+
+                        // ②マーカーを地図に立てる
+                        if (place.geometry && place.geometry.location) {
+                            const marker = new google.maps.Marker({
+                                map: map,
+                                position: place.geometry.location,
+                                title: place.name
+                            });
+                            markers.push(marker);
+                        }
+                    });
+
+                    // ③全マーカーを含むように地図をリセンター
+                    const bounds = new google.maps.LatLngBounds();
+                    markers.forEach(m => bounds.extend(m.getPosition()));
+                    map.fitBounds(bounds);
+                } else {
+                    const li = document.createElement('li');
+                    li.textContent = '該当する観光地がありません。';
+                    ul.appendChild(li);
+                }
+            });
+        });
+    });
+
+    // 3. 選択した観光地をスケジュールに登録する（バックエンド連携）
+    function addToSchedule(place) {
+        // place.name と place.formatted_address をサーバーに送る
+        const payload = {
+            placeName: place.name,
+            placeAddress: place.formatted_address,
+            // 必要なら place.geometry.location.lat()／lng() なども送れる
+        };
+
+        fetch('/api/schedule/add', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                            },
+            body: JSON.stringify(payload)
+        })
+        .then(res => {
+            if (res.ok) {
+                alert('スケジュールに追加しました');
+                // 登録が成功したら画面リロードか、部分更新で「your schedule」を更新してもよい
+                window.location.reload();
+            } else {
+                return res.json().then(err => { throw new Error(err.message || '登録に失敗'); });
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert('スケジュールの登録に失敗しました');
+        });
+    }
+    /*]]>*/
 </script>
-
 </body>
 </html>

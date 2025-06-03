@@ -21,7 +21,7 @@ public class SecurityConfig {
     public SecurityConfig(MyUserDetailsService uds) {
         this.userDetailsService = uds;
     }
-    //IoCコンテナに管理されるオブジェクト@Bean
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -35,18 +35,38 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+                // Spring Security に独自の UserDetailsService を登録
                 .userDetailsService(userDetailsService)
+
+                // (1) 開発中の簡易化のため CSRF を一旦無効化
                 .csrf(csrf -> csrf.disable())
+
+                // (2) URL ごとのアクセス制御
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/login", "/register", "/css/**").permitAll()
+                        // ログイン／登録画面や CSS・JS、そして H2 コンソールは認証不要
+                        .requestMatchers(
+                                "/login",
+                                "/register",
+                                "/css/**",
+                                "/h2-console/**"     // ← ここを追加
+                        ).permitAll()
+                        // それ以外はすべて認証必須
                         .anyRequest().authenticated()
                 )
+
+                // (3) H2 コンソールは <frame> を使って表示するため、同一オリジンからのフレームを許可
+                .headers(headers -> headers
+                        .frameOptions(frame -> frame.sameOrigin())
+                )
+
+                // (4) フォームログインの設定
                 .formLogin(form -> form
-                        .loginPage("/login")                    // GET /login でフォーム表示
-                        //.loginProcessingUrl("/perform_login")   // POST /perform_login で認証処理
-                        .defaultSuccessUrl("/search", true)
+                        .loginPage("/login")             // GET /login でログインフォームを表示
+                        .defaultSuccessUrl("/search", true)  // 認証後に /search へ
                         .permitAll()
                 )
+
+                // (5) ログアウトはデフォルト設定
                 .logout(Customizer.withDefaults());
 
         return http.build();
