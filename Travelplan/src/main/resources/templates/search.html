@@ -6,7 +6,7 @@
 
     <!-- Google Maps JavaScript API を読み込む（必ず HTTPS で） -->
     <script async defer
-            src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB1XZbyGazfOgADzHzTDjyKOcKuWe1x5LQ&language&libraries=places&callback=initMap">
+            src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB1XZbyGazfOgADzHzTDjyKOcKuWe1x5LQ&libraries=places&callback=initMap&language=ja">
     </script>
 
     <style>
@@ -49,124 +49,186 @@
     <!-- 現在のスケジュール一覧 -->
     <section id="schedule-section">
         <h2 style="padding: 0 16px; margin-top: 32px;">あなたのスケジュール</h2>
-        <ul id="schedule-list">
-            <li th:each="item : ${scheduleList}">
-                <span th:text="${item.placeName} + ' (' + item.placeAddress + ')'">観光地名 (住所)</span>
-                <span th:text="${#temporals.format(item.scheduledAt, 'yyyy/MM/dd HH:mm')}">登録日時</span>
-            </li>
-        </ul>
+        <ul id="schedule-list"></ul>
     </section>
 </main>
 
 <script th:inline="javascript">
     /*<![CDATA[*/
-    let map;
-    let markers = [];
 
-    // 1. Google Maps API が読み込まれると自動的に呼ばれる
-    function initMap() {
-        map = new google.maps.Map(document.getElementById('map'), {
-            center: { lat: 35.6895, lng: 139.6917 }, // 東京駅周辺
-            zoom: 13
-        });
+    // グローバル変数
+    let map;
+    let geocoder;
+    let placesService;
+    let markers = [];
+    let infoWindow = null;
+    let clickMarker = null;
+
+    // スケジュール一覧を取得して表示
+    function updateScheduleList() {
+      fetch('/api/schedule/list')
+        .then(res => res.json())
+        .then(list => {
+          const ul = document.getElementById('schedule-list');
+          ul.innerHTML = '';
+          list.forEach(item => {
+            const li = document.createElement('li');
+            li.innerHTML = `
+              <span>${item.placeName} (${item.placeAddress})</span>
+              <span>${new Date(item.scheduledAt).toLocaleString()}</span>
+            `;
+            ul.appendChild(li);
+          });
+        })
+        .catch(err => console.error('スケジュール一覧取得失敗', err));
     }
 
-    // 2. 検索ボタンを押したときの処理
-    document.addEventListener('DOMContentLoaded', function() {
-        document.getElementById('btnSearch').addEventListener('click', function() {
-            const keyword = document.getElementById('keyword').value.trim();
-            if (!keyword) {
-                alert('キーワードを入力してください');
-                return;
-            }
+    function initMap() {
+      map = new google.maps.Map(document.getElementById('map'), {
+        center: { lat: 35.6895, lng: 139.6917 },
+        zoom: 13,
+      });
+      geocoder = new google.maps.Geocoder();
+      placesService = new google.maps.places.PlacesService(map);
 
-            // PlacesService を使ってキーワード検索
-            const service = new google.maps.places.PlacesService(map);
-            const request = {
-                query: keyword,
-                fields: ['name', 'geometry', 'formatted_address']  // 取得したい項目
-            };
-
-            service.findPlaceFromQuery(request, (results, status) => {
-                const ul = document.getElementById('result-list');
-                ul.innerHTML = '';   // 既存結果クリア
-
-                // 地図上のマーカーもクリア
-                markers.forEach(m => m.setMap(null));
-                markers = [];
-
-                if (status === google.maps.places.PlacesServiceStatus.OK && results && results.length) {
-                    // 結果をリスト表示＆マーカー登録
-                    results.forEach(place => {
-                        // ①リストに項目を追加
-                        const li = document.createElement('li');
-                        li.textContent = `${place.name} (${place.formatted_address})`;
-
-                        // 「スケジュール追加」ボタンを作成
-                        const btn = document.createElement('button');
-                        btn.textContent = 'スケジュールに追加';
-                        btn.addEventListener('click', function() {
-                            addToSchedule(place); // 後述する関数でバックエンドへ登録
-                        });
-
-                        li.appendChild(btn);
-                        ul.appendChild(li);
-
-                        // ②マーカーを地図に立てる
-                        if (place.geometry && place.geometry.location) {
-                            const marker = new google.maps.Marker({
-                                map: map,
-                                position: place.geometry.location,
-                                title: place.name
-                            });
-                            markers.push(marker);
-                        }
-                    });
-
-                    // ③全マーカーを含むように地図をリセンター
-                    const bounds = new google.maps.LatLngBounds();
-                    markers.forEach(m => bounds.extend(m.getPosition()));
-                    map.fitBounds(bounds);
-                } else {
-                    const li = document.createElement('li');
-                    li.textContent = '該当する観光地がありません。';
-                    ul.appendChild(li);
-                }
+      map.addListener('click', event => {
+        const latlng = event.latLng;
+        placesService.nearbySearch({
+          location: latlng,
+          radius: 30,
+          type: ['establishment']
+        }, (placeResults, nearbyStatus) => {
+          if (nearbyStatus === google.maps.places.PlacesServiceStatus.OK && placeResults.length) {
+            openInfoWindow(latlng, { name: placeResults[0].name, address: placeResults[0].vicinity || '住所情報なし' });
+          } else {
+            geocoder.geocode({ location: latlng }, (results, status) => {
+              if (status === 'OK' && results.length) {
+                const geo = results[0];
+                const prem = (geo.address_components || []).find(c =>
+                  c.types.includes('premise') || c.types.includes('point_of_interest')
+                );
+                openInfoWindow(latlng, { name: prem ? prem.long_name : '(建物名不明)', address: geo.formatted_address });
+              } else {
+                openInfoWindow(latlng, { name: '(取得失敗)', address: '(住所不明)' });
+              }
             });
+          }
         });
+      });
+    }
+
+    function openInfoWindow(latlng, info) {
+      if (clickMarker) clickMarker.setMap(null);
+      if (infoWindow) infoWindow.close();
+
+      clickMarker = new google.maps.Marker({ map, position: latlng, title: info.name });
+      const html = `
+        <div style="min-width:200px; font-size:14px; line-height:1.4;">
+          <strong>${info.name}</strong><br>
+          <small>${info.address}</small><br><br>
+          <button id="add-btn-click">ここをスケジュールに追加</button>
+        </div>
+      `;
+      infoWindow = new google.maps.InfoWindow({ content: html });
+
+      clickMarker.addListener('click', () => {
+        infoWindow.open(map, clickMarker);
+        attachClickAddHandler(info, latlng);
+      });
+      infoWindow.open(map, clickMarker);
+      attachClickAddHandler(info, latlng);
+    }
+
+    function attachClickAddHandler(info, latlng) {
+      google.maps.event.addListenerOnce(infoWindow, 'domready', () => {
+        const btn = document.getElementById('add-btn-click');
+        if (!btn) return;
+        btn.addEventListener('click', () => {
+          fetch('/api/schedule/add', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ placeName: info.name, placeAddress: info.address, latitude: latlng.lat(), longitude: latlng.lng() })
+          })
+          .then(res => {
+            if (res.ok) {
+              alert('スケジュールに追加しました');
+              updateScheduleList();
+            } else {
+              return res.json().then(err => { throw new Error(err.message || '登録に失敗'); });
+            }
+          })
+          .catch(err => { console.error(err); alert('登録エラー'); });
+          infoWindow.close();
+        });
+      });
+    }
+
+    function addToSchedule(place) {
+      fetch('/api/schedule/add', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ placeName: place.name, placeAddress: place.formatted_address || place.address,
+          latitude: place.geometry?.location.lat(), longitude: place.geometry?.location.lng() })
+      })
+      .then(res => {
+        if (res.ok) {
+          alert('スケジュールに追加しました');
+          updateScheduleList();
+        } else {
+          return res.json().then(err => { throw new Error(err.message || '登録に失敗'); });
+        }
+      })
+      .catch(err => { console.error(err); alert('登録エラー'); });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('btnSearch').addEventListener('click', () => {
+        const keyword = document.getElementById('keyword').value.trim();
+        if (!keyword) return alert('キーワードを入力してください');
+        const resultUl = document.getElementById('result-list');
+        resultUl.innerHTML = '';
+        markers.forEach(m => m.setMap(null)); markers = [];
+        placesService.findPlaceFromQuery({ query: keyword, fields: ['place_id','name','geometry','formatted_address'] },
+          (results, status) => {
+            if (status === google.maps.places.PlacesServiceStatus.OK && results.length) {
+              results.forEach(place => {
+                // リスト
+                const li = document.createElement('li');
+                li.textContent = `${place.name} (${place.formatted_address})`;
+                const btn = document.createElement('button');
+                btn.textContent = 'スケジュールに追加';
+                btn.addEventListener('click', () => addToSchedule(place));
+                li.appendChild(btn);
+                resultUl.appendChild(li);
+                // マーカー
+                if (place.geometry?.location) {
+                  const m = new google.maps.Marker({ map, position: place.geometry.location, title: place.name });
+                  const iw = new google.maps.InfoWindow({ content: `
+                    <div style="min-width:200px;"><strong>${place.name}</strong><br>
+                    <small>${place.formatted_address}</small><br><button id="btn-${place.place_id}">追加</button></div>
+                  ` });
+                  m.addListener('click', () => {
+                    iw.open(map, m);
+                    google.maps.event.addListenerOnce(iw, 'domready', () => {
+                      const b = document.getElementById(`btn-${place.place_id}`);
+                      b?.addEventListener('click', () => { addToSchedule(place); iw.close(); });
+                    });
+                  });
+                  markers.push(m);
+                }
+              });
+              if (markers.length) map.setCenter(markers[0].getPosition());
+            } else {
+              resultUl.innerHTML = '<li>該当する観光地がありません。</li>';
+            }
+          }
+        );
+      });
+
+      // 初回にスケジュール一覧を取得
+      updateScheduleList();
     });
 
-    // 3. 選択した観光地をスケジュールに登録する（バックエンド連携）
-    function addToSchedule(place) {
-        // place.name と place.formatted_address をサーバーに送る
-        const payload = {
-            placeName: place.name,
-            placeAddress: place.formatted_address,
-            // 必要なら place.geometry.location.lat()／lng() なども送れる
-        };
-
-        fetch('/api/schedule/add', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                            },
-            body: JSON.stringify(payload)
-        })
-        .then(res => {
-            if (res.ok) {
-                alert('スケジュールに追加しました');
-                // 登録が成功したら画面リロードか、部分更新で「your schedule」を更新してもよい
-                window.location.reload();
-            } else {
-                return res.json().then(err => { throw new Error(err.message || '登録に失敗したんゴねえ'); });
-            }
-        })
-        .catch(err => {
-            console.error(err);
-            alert('スケジュールの登録に失敗しました');
-        });
-    }
     /*]]>*/
 </script>
+
 </body>
 </html>
