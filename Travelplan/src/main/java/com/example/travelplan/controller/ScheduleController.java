@@ -63,21 +63,26 @@ public class ScheduleController {
         List<ScheduleItem> list = scheduleService.getScheduleForUser(user);
         return ResponseEntity.ok(list);
     }
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteSchedule(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails springUser) {
 
-    // リクエストボディ用の DTO
-    public static class ScheduleRequest {
-        private String placeName;
-        private String placeAddress;
-        private Double latitude;
-        private Double longitude;
-        // getter / setter
-        public String getPlaceName() { return placeName; }
-        public void setPlaceName(String placeName) { this.placeName = placeName; }
-        public String getPlaceAddress() { return placeAddress; }
-        public void setPlaceAddress(String placeAddress) { this.placeAddress = placeAddress; }
-        public Double getLatitude() { return latitude; }
-        public void setLatitude(Double latitude) { this.latitude = latitude; }
-        public Double getLongitude() { return longitude; }
-        public void setLongitude(Double longitude) { this.longitude = longitude; }
+        // 認証ユーザー取得（既存の userRepo を使って）
+        Optional<User> optUser = userRepo.findByUsername(springUser.getUsername());
+        if (optUser.isEmpty()) {
+            return ResponseEntity.status(401).body("ユーザーが見つかりません");
+        }
+        User user = optUser.get();
+
+        // サービス層で本人のスケジュールかチェックしつつ削除
+        boolean deleted = scheduleService.deleteSchedule(user, id);
+        if (deleted) {
+            return ResponseEntity.ok().build();
+        } else {
+            return ResponseEntity.status(403).body("削除権限がないか、該当データが存在しません");
+        }
     }
 }
+
+

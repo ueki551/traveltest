@@ -8,6 +8,7 @@ import com.example.travelplan.repository.ScheduleItemRepository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class ScheduleService {
@@ -34,5 +35,16 @@ public class ScheduleService {
     @Transactional(readOnly = true)
     public List<ScheduleItem> getScheduleForUser(User user) {
         return repo.findByUserOrderByScheduledAtDesc(user);
+    }
+
+    // スケジュール削除
+    @Transactional
+    public boolean deleteSchedule(User user, Long scheduleId) {
+        Optional<ScheduleItem> opt = repo.findById(scheduleId);
+        if (opt.isPresent() && opt.get().getUser().equals(user)) {
+            repo.delete(opt.get());
+            return true;
+        }
+        return false;
     }
 }
