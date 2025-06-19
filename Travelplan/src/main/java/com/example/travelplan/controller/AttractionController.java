@@ -20,19 +20,14 @@ public class AttractionController {
     private final ScheduleService scheduleService;
     private final UserRepository userRepo;
 
-    // UserRepository を注入しておく（認証済みユーザーを DB から取ってくるため）
+
     public AttractionController(ScheduleService scheduleService,
                                 UserRepository userRepo) {
         this.scheduleService = scheduleService;
         this.userRepo = userRepo;
     }
 
-    /**
-     * 「/search」に GET リクエストが来たときに呼ばれるメソッド。
-     * ・認証済みユーザー（UserDetails） → ドメインの User を取得
-     * ・scheduleService.getScheduleForUser(...) で ScheduleItem 一覧を取って Model に追加
-     * ・未ログイン時は空リストを渡す
-     */
+
     @GetMapping("/search")
     public String showSearchForm(
             @AuthenticationPrincipal UserDetails springUser,  // Spring Security の認証情報
@@ -55,10 +50,10 @@ public class AttractionController {
             scheduleList = List.of();
         }
 
-        // Model に "scheduleList" として必ずセットする
-        model.addAttribute("scheduleList", scheduleList);
+                model.addAttribute("scheduleList", scheduleList);
 
-        // ここで "search" を返すと、src/main/resources/templates/search.html がレンダリングされる
+
         return "search";
     }
+
 }

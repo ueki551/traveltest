@@ -18,11 +18,11 @@ public class TouristAttraction {
     private double latitude;
     private double longitude;
 
-    // No-args constructor required by JPA
+
     public TouristAttraction() {
     }
 
-    // All-args constructor (without id)
+
     public TouristAttraction(String name, String description, double latitude, double longitude) {
         this.name = name;
         this.description = description;
@@ -30,7 +30,7 @@ public class TouristAttraction {
         this.longitude = longitude;
     }
 
-    // ゲッターとセッター
+
     public Long getId() { return id; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }

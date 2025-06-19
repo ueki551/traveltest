@@ -4,9 +4,22 @@
     <meta charset="UTF-8">
     <title>観光地検索＆スケジュール登録</title>
 
-    <!-- Google Maps JavaScript API を読み込む（必ず HTTPS で） -->
-    <script async defer
-            src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB1XZbyGazfOgADzHzTDjyKOcKuWe1x5LQ&libraries=places&callback=initMap&language=ja">
+    <!-- Google Maps JavaScript API を読み込む -->
+    <!-- APIキーをignoreで隠す -->
+    <!-- APIキーを読み込む -->
+    <script src="/apikey.js"></script>
+
+    <!-- Google Maps API を動的に読み込む -->
+    <script>
+        function loadGoogleMapsScript() {
+            const script = document.createElement('script');
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&callback=initMap&language=ja`;
+            script.async = true;
+            script.defer = true;
+            document.head.appendChild(script);
+        }
+
+        window.onload = loadGoogleMapsScript;
     </script>
 
     <style>

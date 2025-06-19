@@ -13,8 +13,7 @@ import com.example.travelplan.repository.UserRepository;
 import java.util.List;
 import java.util.Optional;
 
-// Thymeleaf＋Ajax で使う場合は @Controller でも OK ですが、
-// ここでは簡易に @RestController として実装します。
+
 @RestController
 @RequestMapping("/api/schedule")
 public class ScheduleController {
@@ -39,18 +38,18 @@ public class ScheduleController {
         }
         User user = optUser.get();
 
-        // 座標情報がなければ null を渡しても OK
+
         Double lat = req.getLatitude();
         Double lng = req.getLongitude();
 
-        // サービス層で保存
+        // サービスで保存
         ScheduleItem item = scheduleService.addSchedule(
                 user, req.getPlaceName(), req.getPlaceAddress(), lat, lng);
 
         return ResponseEntity.ok(item);
     }
 
-    // ユーザーのスケジュール一覧を返す（GET で取得）
+    // ユーザーのスケジュール一覧を返す
     @GetMapping("/list")
     public ResponseEntity<List<ScheduleItem>> getScheduleList(
             @AuthenticationPrincipal UserDetails springUser) {
@@ -68,7 +67,7 @@ public class ScheduleController {
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetails springUser) {
 
-        // 認証ユーザー取得（既存の userRepo を使って）
+        // 認証ユーザー取得
         Optional<User> optUser = userRepo.findByUsername(springUser.getUsername());
         if (optUser.isEmpty()) {
             return ResponseEntity.status(401).body("ユーザーが見つかりません");

@@ -43,12 +43,12 @@ public class SecurityConfig {
 
                 // (2) URL ごとのアクセス制御
                 .authorizeHttpRequests(auth -> auth
-                        // ログイン／登録画面や CSS・JS、そして H2 コンソールは認証不要
+
                         .requestMatchers(
                                 "/login",
                                 "/register",
                                 "/css/**",
-                                "/h2-console/**"     // ← ここを追加
+                                "/h2-console/**"
                         ).permitAll()
                         // それ以外はすべて認証必須
                         .anyRequest().authenticated()
@@ -66,7 +66,7 @@ public class SecurityConfig {
                         .permitAll()
                 )
 
-                // (5) ログアウトはデフォルト設定
+                // (5) ログアウト
                 .logout(Customizer.withDefaults());
 
         return http.build();

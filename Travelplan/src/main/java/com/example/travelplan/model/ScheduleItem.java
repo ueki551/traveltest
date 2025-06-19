@@ -33,7 +33,7 @@ public class ScheduleItem {
     @JoinColumn(name = "user_id")
     private User user;
 
-    // --- ゲッタ／セッタ ----
+
     public Long getId() { return id; }
     public String getPlaceName() { return placeName; }
     public void setPlaceName(String placeName) { this.placeName = placeName; }

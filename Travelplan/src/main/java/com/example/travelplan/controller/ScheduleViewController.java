@@ -20,10 +20,7 @@ public class ScheduleViewController {
         this.scheduleService = scheduleService;
     }
 
-    /**
-     * 画面表示用のエンドポイント
-     * ブラウザから /schedule にアクセスすると、Thymeleaf テンプレート schedule.html をレンダリングする
-     */
+
     @GetMapping("/schedule")
     public String showSchedulePage(
             @AuthenticationPrincipal User user,  // 認証済みUserが入る
