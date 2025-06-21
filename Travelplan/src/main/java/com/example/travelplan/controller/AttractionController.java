@@ -3,6 +3,7 @@ package com.example.travelplan.controller;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
@@ -20,13 +21,15 @@ public class AttractionController {
     private final ScheduleService scheduleService;
     private final UserRepository userRepo;
 
+    // application.properties の external.api.key を読み込む
+    @Value("${external.api.key}")
+    private String apiKey;
 
     public AttractionController(ScheduleService scheduleService,
                                 UserRepository userRepo) {
         this.scheduleService = scheduleService;
         this.userRepo = userRepo;
     }
-
 
     @GetMapping("/search")
     public String showSearchForm(
@@ -36,22 +39,21 @@ public class AttractionController {
         List<ScheduleItem> scheduleList;
 
         if (springUser != null) {
-            // springUser.getUsername() がドメインの User.username に対応している想定
             Optional<User> optDomainUser = userRepo.findByUsername(springUser.getUsername());
             if (optDomainUser.isPresent()) {
                 User domainUser = optDomainUser.get();
                 scheduleList = scheduleService.getScheduleForUser(domainUser);
             } else {
-                // 万が一 DB にユーザーがいなかったら空リスト
                 scheduleList = List.of();
             }
         } else {
-            // springUser が null = 未ログイン時
             scheduleList = List.of();
         }
 
-                model.addAttribute("scheduleList", scheduleList);
-
+        // 既存のスケジュールリスト
+        model.addAttribute("scheduleList", scheduleList);
+        // APIキーも Model に追加
+        model.addAttribute("apiKey", apiKey);
 
         return "search";
     }

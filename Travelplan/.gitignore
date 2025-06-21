@@ -32,5 +32,3 @@ build/
 ### VS Code ###
 .vscode/
 
-#APIキーファイルの除外
-src/main/resources/static/apikey.js
