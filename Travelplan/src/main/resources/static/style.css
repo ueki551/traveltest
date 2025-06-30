@@ -1,1 +1,24 @@
 <link href="/css/style.css" rel="stylesheet">
+/* style.css の例 */
+
+#schedule-list {
+  padding: 0 16px;
+  margin-top: 32px;
+  list-style: none;
+}
+
+#schedule-list li {
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  cursor: move; /* 掴める形に */
+}
+
+/* ドラッグ中のプレースホルダー */
+.ui-state-highlight {
+  height: 2em;
+  line-height: 2em;
+  background: #f0f0f0;
+  border: 1px dashed #ccc;
+  margin-bottom: 8px;
+}

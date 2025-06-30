@@ -8,4 +8,5 @@ import java.util.List;
 public interface ScheduleItemRepository extends JpaRepository<ScheduleItem, Long> {
     // 特定ユーザーのスケジュール一覧を取得するメソッド
     List<ScheduleItem> findByUserOrderByScheduledAtDesc(User user);
+
 }
